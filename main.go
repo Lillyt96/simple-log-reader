@@ -20,11 +20,11 @@ func main() {
 
 	// task 3 top 3 active unique addresses
 	top3IPs := data.ipAddresses.getTop3Values()
-	fmt.Printf("top 3 IPs: %v", top3IPs)
+	fmt.Printf("\ntop 3 IPs: %+v", top3IPs)
 
 	// task 2 top 3 most visited URLs
 	top3URLs := data.urls.getTop3Values()
-	fmt.Printf("top 3 Websites: %v", top3URLs)
+	fmt.Printf("\ntop 3 Websites: %+v", top3URLs)
 
 }
 
