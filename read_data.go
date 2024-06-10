@@ -1,13 +1,16 @@
 package main
 
 import (
+	"log"
+	"os"
 	"regexp"
 	"sort"
 )
 
 var (
-	ipv4RegexStr = `((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]|[0-9])`
-	urlRegexStr  = `GET (http://example.net)?(.*)`
+	cleanRegexStr = `( HTTP(.*))`
+	urlRegexStr   = `GET (http://example.net)?(.*)`
+	ipv4RegexStr  = `((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]|[0-9])`
 )
 
 type logData struct {
@@ -24,12 +27,23 @@ type uniqueWithCount struct {
 	count int
 }
 
-func extractLogData(input string) *logData {
-	data := &logData{}
-	// clean up unused logs
-	cleanRegex := regexp.MustCompile(`( HTTP(.*))`)
+func readLogFile(filepath string) string {
+	contents, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(contents)
+}
+
+// extractLogData extracts urls and ips from a log string with the format provided in programming-task-example-data.log.
+func extractLogData(input string) logData {
+	data := logData{}
+	// remove unused information from logs
+	cleanRegex := regexp.MustCompile(cleanRegexStr)
 	input = cleanRegex.ReplaceAllString(input, "")
 
+	// extract url information
 	urlRegex := regexp.MustCompile(urlRegexStr)
 	urlSubstring := urlRegex.FindAllStringSubmatch(input, -1)
 
@@ -37,12 +51,14 @@ func extractLogData(input string) *logData {
 		data.urls.result = append(data.urls.result, url[2])
 	}
 
+	// extract ip information
 	ipv4Regex := regexp.MustCompile(ipv4RegexStr)
 	data.ipAddresses.result = ipv4Regex.FindAllString(input, -1)
 
 	return data
 }
 
+// getUniqueValues returns a list of unique values from a result list.
 func (r result) getUniqueValues() []string {
 	var uniques []string
 
@@ -55,6 +71,7 @@ func (r result) getUniqueValues() []string {
 	return uniques
 }
 
+// getUniqueValues returns a the top 3 values from a result list.
 func (r result) getTop3Values() []uniqueWithCount {
 	var uniquesCount []uniqueWithCount
 
@@ -78,6 +95,7 @@ func (r result) getTop3Values() []uniqueWithCount {
 	return uniquesCount[:3]
 }
 
+// mapUniqueValuesToCount reads a list and outputs a map of unique values to the count.
 func mapUniqueValuesToCount(input []string) map[string]int {
 	uniqueCountMap := map[string]int{}
 

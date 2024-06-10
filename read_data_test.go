@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -139,82 +140,6 @@ func Test_result_getUniqueValues(t *testing.T) {
 	}
 }
 
-func Test_result_getUniqueWithCount(t *testing.T) {
-	type fields struct {
-		result []string
-	}
-	tests := []struct {
-		name                string
-		fields              fields
-		wantUniqueListCount map[string]int
-	}{
-		{
-			name: "Success - IP Addresses",
-			fields: fields{
-				result: []string{
-					"177.71.128.21",
-					"177.71.128.21",
-					"177.71.128.21",
-					"200.71.128.21",
-					"2.71.128.21",
-					"2.71.128.21"},
-			},
-			wantUniqueListCount: map[string]int{
-				"177.71.128.21": 3,
-				"200.71.128.21": 1,
-				"2.71.128.21":   2,
-			},
-		},
-		{
-			name: "Success - urls",
-			fields: fields{
-				result: []string{
-					"/to-an-error",
-					"http://example.net/faq/",
-					"faq/how-to-install/",
-					"faq/how-to-install/",
-					"/blog/category/community/",
-					"/blog/category/community/",
-					"/blog/category/community/"},
-			},
-			wantUniqueListCount: map[string]int{
-				"/to-an-error":              1,
-				"http://example.net/faq/":   1,
-				"faq/how-to-install/":       2,
-				"/blog/category/community/": 3,
-			},
-		},
-		{
-			name: "Success - no duplicates",
-			fields: fields{
-				result: []string{
-					"/to-an-error",
-					"http://example.net/faq/"},
-			},
-			wantUniqueListCount: map[string]int{
-				"/to-an-error":            1,
-				"http://example.net/faq/": 1,
-			},
-		},
-		{
-			name: "Success - empty list",
-			fields: fields{
-				result: []string{},
-			},
-			wantUniqueListCount: map[string]int{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := result{
-				result: tt.fields.result,
-			}
-			gotUniqueListCount := mapUniqueValuesToCount(w.result)
-			assert.Equalf(t, tt.wantUniqueListCount, gotUniqueListCount, "getUniqueWithCount()")
-		})
-	}
-}
-
 func Test_result_getTop3Values(t *testing.T) {
 	type fields struct {
 		result []string
@@ -341,6 +266,110 @@ func Test_result_getTop3Values(t *testing.T) {
 				result: tt.fields.result,
 			}
 			assert.ElementsMatchf(t, tt.want, w.getTop3Values(), "getTop3Values()")
+		})
+	}
+}
+
+func Test_result_mapUniqueValuesToCount(t *testing.T) {
+	type fields struct {
+		result []string
+	}
+	tests := []struct {
+		name                string
+		fields              fields
+		wantUniqueListCount map[string]int
+	}{
+		{
+			name: "Success - IP Addresses",
+			fields: fields{
+				result: []string{
+					"177.71.128.21",
+					"177.71.128.21",
+					"177.71.128.21",
+					"200.71.128.21",
+					"2.71.128.21",
+					"2.71.128.21"},
+			},
+			wantUniqueListCount: map[string]int{
+				"177.71.128.21": 3,
+				"200.71.128.21": 1,
+				"2.71.128.21":   2,
+			},
+		},
+		{
+			name: "Success - urls",
+			fields: fields{
+				result: []string{
+					"/to-an-error",
+					"http://example.net/faq/",
+					"faq/how-to-install/",
+					"faq/how-to-install/",
+					"/blog/category/community/",
+					"/blog/category/community/",
+					"/blog/category/community/"},
+			},
+			wantUniqueListCount: map[string]int{
+				"/to-an-error":              1,
+				"http://example.net/faq/":   1,
+				"faq/how-to-install/":       2,
+				"/blog/category/community/": 3,
+			},
+		},
+		{
+			name: "Success - no duplicates",
+			fields: fields{
+				result: []string{
+					"/to-an-error",
+					"http://example.net/faq/"},
+			},
+			wantUniqueListCount: map[string]int{
+				"/to-an-error":            1,
+				"http://example.net/faq/": 1,
+			},
+		},
+		{
+			name: "Success - empty list",
+			fields: fields{
+				result: []string{},
+			},
+			wantUniqueListCount: map[string]int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := result{
+				result: tt.fields.result,
+			}
+			gotUniqueListCount := mapUniqueValuesToCount(w.result)
+			assert.Equalf(t, tt.wantUniqueListCount, gotUniqueListCount, "getUniqueWithCount()")
+		})
+	}
+}
+
+func Test_readLogFile(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+		want string
+	}{
+		{
+			name: "success - data available",
+			data: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
+			want: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
+		},
+		{
+			name: "success - empty file",
+			data: "",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			err := os.WriteFile(dir+"test_data", []byte(tt.data), 0666)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want, readLogFile(dir+"test_data"))
 		})
 	}
 }
