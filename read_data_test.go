@@ -6,6 +6,34 @@ import (
 	"testing"
 )
 
+func Test_readLogFile(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+		want string
+	}{
+		{
+			name: "success - data available",
+			data: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
+			want: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
+		},
+		{
+			name: "success - empty file",
+			data: "",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			err := os.WriteFile(dir+"test_data", []byte(tt.data), 0666)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want, readLogFile(dir+"test_data"))
+		})
+	}
+}
+
 func Test_extractData(t *testing.T) {
 	type args struct {
 		input string
@@ -13,14 +41,14 @@ func Test_extractData(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *logData
+		want logData
 	}{
 		{
 			name: "Success - one record of each found",
 			args: args{
 				input: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
 			},
-			want: &logData{
+			want: logData{
 				urls: result{
 					[]string{"/intranet-analytics/"},
 				},
@@ -36,7 +64,7 @@ func Test_extractData(t *testing.T) {
 					"168.41.191.40 - - [09/Jul/2018:10:10:38 +0200] \"GET http://example.net/blog/category/meta/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_7) AppleWebKit/534.24 (KHTML, like Gecko) RockMelt/0.9.58.494 Chrome/11.0.696.71 Safari/534.24\"\n" +
 					"72.44.32.10 - - [09/Jul/2018:15:48:07 +0200] \"GET / HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (compatible; MSIE 10.6; Windows NT 6.1; Trident/5.0; InfoPath.2; SLCC1; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET CLR 2.0.50727) 3gpp-gba UNTRUSTED/1.0\" junk extra\n",
 			},
-			want: &logData{
+			want: logData{
 				urls: result{
 					[]string{"/intranet-analytics/", "/blog/category/meta/", "/"},
 				},
@@ -50,7 +78,7 @@ func Test_extractData(t *testing.T) {
 			args: args{
 				input: "this log does not contain an ip or url address",
 			},
-			want: &logData{
+			want: logData{
 				urls:        result{},
 				ipAddresses: result{},
 			},
@@ -342,34 +370,6 @@ func Test_result_mapUniqueValuesToCount(t *testing.T) {
 			}
 			gotUniqueListCount := mapUniqueValuesToCount(w.result)
 			assert.Equalf(t, tt.wantUniqueListCount, gotUniqueListCount, "getUniqueWithCount()")
-		})
-	}
-}
-
-func Test_readLogFile(t *testing.T) {
-	tests := []struct {
-		name string
-		data string
-		want string
-	}{
-		{
-			name: "success - data available",
-			data: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
-			want: "177.71.128.21 - - [10/Jul/2018:22:21:28 +0200] \"GET /intranet-analytics/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; U; Linux x86_64; fr-FR) AppleWebKit/534.7 (KHTML, like Gecko) Epiphany/2.30.6 Safari/534.7\"\n",
-		},
-		{
-			name: "success - empty file",
-			data: "",
-			want: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			err := os.WriteFile(dir+"test_data", []byte(tt.data), 0666)
-			assert.NoError(t, err)
-
-			assert.Equal(t, tt.want, readLogFile(dir+"test_data"))
 		})
 	}
 }
