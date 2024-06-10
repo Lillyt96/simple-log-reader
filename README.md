@@ -1,7 +1,7 @@
 # Simple-log-reader
 ## Overview
 
-This application reads a log file and analyses its:
+This application reads a log file and analyses:
 1. The number of unique IP addresses
 2. The top 3 most visited URLs 
 3. The top 3 most active IP addresses
