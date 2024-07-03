@@ -26,4 +26,5 @@ See output in terminal.
 3. All urls in `programming-task-example-data.log` have the parent url of `http://example.net/`
 4. For the purpose of analysis, "url" refers to all subpages. I.e. `/faq/how-to-install/` and 
 `/faq/how-to/` are treated as separate urls.
+5. "Top 3" means limiting the results to 3 values.
 

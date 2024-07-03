@@ -1,4 +1,4 @@
-module simple-log-reader
+module awesomeProject
 
 go 1.20
 
