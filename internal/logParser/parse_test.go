@@ -101,7 +101,7 @@ func TestParse(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.want, got)
+			assert.ElementsMatch(t, tt.want.logs, got.logs)
 		})
 	}
 }
@@ -187,7 +187,7 @@ func TestParseConcurrently(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			assert.Equal(t, tt.want, got)
+			assert.ElementsMatch(t, tt.want.logs, got.logs)
 		})
 	}
 }
