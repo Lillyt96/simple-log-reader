@@ -17,6 +17,7 @@ func BenchmarkParse(b *testing.B) {
 
 func BenchmarkParseConcurrently(b *testing.B) {
 	// skipping for CI.
+	b.Skip()
 	for n := 0; n < b.N; n++ {
 		ParseConcurrently("parse-test-benchmark-data.log", 4)
 	}
