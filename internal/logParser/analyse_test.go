@@ -51,6 +51,7 @@ func Test_findTopN(t *testing.T) {
 					"/docs",
 					"/temp-redirect",
 					"/newsletter",
+					"/nada",
 				},
 				n: 3,
 			},
@@ -96,7 +97,7 @@ func Test_findTopN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.ElementsMatchf(t, tt.want, findTopN(tt.args.input, tt.args.n), "findTopN(%v, %v)", tt.args.input, tt.args.n)
+			assert.Equalf(t, tt.want, findTopN(tt.args.input, tt.args.n), "findTopN(%v, %v)", tt.args.input, tt.args.n)
 		})
 	}
 }

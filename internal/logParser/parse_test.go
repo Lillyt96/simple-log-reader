@@ -8,14 +8,17 @@ import (
 
 // benchmark testing
 func BenchmarkParse(b *testing.B) {
+	// skipping for CI.
+	b.Skip()
 	for n := 0; n < b.N; n++ {
-		Parse("programming-task-example-data.log")
+		Parse("parse-test-benchmark-data.log")
 	}
 }
 
 func BenchmarkParseConcurrently(b *testing.B) {
+	// skipping for CI.
 	for n := 0; n < b.N; n++ {
-		ParseConcurrently("programming-task-example-data.log")
+		ParseConcurrently("parse-test-benchmark-data.log", 4)
 	}
 }
 
@@ -35,7 +38,7 @@ func TestParse(t *testing.T) {
 				data: testLogExampleData(),
 			},
 			want: &Logs{
-				logs: []Log{
+				Logs: []Log{
 					{
 						Ip:     "50.112.00.11",
 						Time:   "11/Jul/2018:17:31:56 +0200",
@@ -81,7 +84,7 @@ func TestParse(t *testing.T) {
 					"168.41.191.9 - - [09/Jul/2018:22:56:45 +0200] \"GET /docs/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; Linux i686; rv:6.0) Gecko/20100101 Firefox/6.0\" 456 789\n",
 			},
 			want: &Logs{
-				logs: []Log{
+				Logs: []Log{
 					{
 						Ip:     "72.44.32.10",
 						Time:   "09/Jul/2018:15:48:07 +0200",
@@ -101,7 +104,7 @@ func TestParse(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			assert.ElementsMatch(t, tt.want.logs, got.logs)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -121,7 +124,7 @@ func TestParseConcurrently(t *testing.T) {
 				data: testLogExampleData(),
 			},
 			want: &Logs{
-				logs: []Log{
+				Logs: []Log{
 					{
 						Ip:     "50.112.00.11",
 						Time:   "11/Jul/2018:17:31:56 +0200",
@@ -167,7 +170,7 @@ func TestParseConcurrently(t *testing.T) {
 					"168.41.191.9 - - [09/Jul/2018:22:56:45 +0200] \"GET /docs/ HTTP/1.1\" 200 3574 \"-\" \"Mozilla/5.0 (X11; Linux i686; rv:6.0) Gecko/20100101 Firefox/6.0\" 456 789\n",
 			},
 			want: &Logs{
-				logs: []Log{
+				Logs: []Log{
 					{
 						Ip:     "72.44.32.10",
 						Time:   "09/Jul/2018:15:48:07 +0200",
@@ -183,11 +186,11 @@ func TestParseConcurrently(t *testing.T) {
 			dir := t.TempDir()
 			err := os.WriteFile(dir+"test_data", []byte(tt.args.data), 0666)
 
-			got, err := ParseConcurrently(dir + "test_data")
+			got, err := ParseConcurrently(dir+"test_data", 5)
 
 			assert.NoError(t, err)
 
-			assert.ElementsMatch(t, tt.want.logs, got.logs)
+			assert.ElementsMatch(t, tt.want.Logs, got.Logs)
 		})
 	}
 }

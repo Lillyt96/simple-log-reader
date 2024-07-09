@@ -1,8 +1,8 @@
 package logParser
 
 import (
+	"awesomeProject/internal/logger"
 	"bufio"
-	"fmt"
 	"os"
 	"regexp"
 	"sync"
@@ -17,10 +17,17 @@ type Log struct {
 }
 
 type Logs struct {
-	logs []Log
+	Logs []Log
 }
 
 func Parse(path string) (*Logs, error) {
+	// set up regex
+	apacheLogRegexStr := "^(\\S*).*\\[(.*)\\]\\s\"(\\S*)\\s(\\S*)\\s([^\"]*)\"\\s(\\S*)\\s(\\S*)\\s\"([^\"]*)\"\\s\"([^\"]*)\"$"
+	apacheLogRegex, err := regexp.Compile(apacheLogRegexStr)
+	if err != nil {
+		return nil, err
+	}
+
 	lines, err := readLines(path)
 	if err != nil {
 		return nil, err
@@ -28,7 +35,7 @@ func Parse(path string) (*Logs, error) {
 
 	var logs []Log
 	for _, line := range lines {
-		extractedLog := extractData(line)
+		extractedLog := extractData(line, apacheLogRegex)
 
 		if extractedLog != nil {
 			logs = append(logs, *extractedLog)
@@ -43,7 +50,12 @@ func readLines(path string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+
+	defer func(file *os.File) {
+		if err = file.Close(); err != nil {
+			logger.Default().Warn(err)
+		}
+	}(file)
 
 	var lines []string
 	scanner := bufio.NewScanner(file)
@@ -55,16 +67,11 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func extractData(logString string) *Log {
-	apacheLogRegexStr := "^(\\S*).*\\[(.*)\\]\\s\"(\\S*)\\s(\\S*)\\s([^\"]*)\"\\s(\\S*)\\s(\\S*)\\s\"([^\"]*)\"\\s\"([^\"]*)\"$"
-
-	apacheLogRegex := regexp.MustCompile(apacheLogRegexStr)
-
+func extractData(logString string, apacheLogRegex *regexp.Regexp) *Log {
 	logResults := apacheLogRegex.FindAllStringSubmatch(logString, -1)
 
 	if len(logResults) == 0 {
-		fmt.Println("skipping logResult file due to incorrect format: " + logString)
-
+		logger.Default().Warnf("skipping logResult file due to incorrect format: %s", logString)
 		return nil
 	}
 
@@ -80,7 +87,14 @@ func extractData(logString string) *Log {
 	return &logResult
 }
 
-func ParseConcurrently(path string) (*Logs, error) {
+func ParseConcurrently(path string, batchWorkers int) (*Logs, error) {
+	// set up regex
+	apacheLogRegexStr := "^(\\S*).*\\[(.*)\\]\\s\"(\\S*)\\s(\\S*)\\s([^\"]*)\"\\s(\\S*)\\s(\\S*)\\s\"([^\"]*)\"\\s\"([^\"]*)\"$"
+	apacheLogRegex, err := regexp.Compile(apacheLogRegexStr)
+	if err != nil {
+		return nil, err
+	}
+
 	// buffer channels
 	jobs := make(chan string)
 	results := make(chan Log)
@@ -93,23 +107,28 @@ func ParseConcurrently(path string) (*Logs, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
-	// Go over file line by line and queue up jobs
+	// defer close file
+	defer func(file *os.File) {
+		if err = file.Close(); err != nil {
+			logger.Default().Warn(err)
+		}
+	}(file)
+
+	// Go over file and queue up jobs
 	go func() {
 		scanner := bufio.NewScanner(file)
-
 		for scanner.Scan() {
 			jobs <- scanner.Text()
 		}
 
-		close(jobs)
+		defer close(jobs)
 	}()
 
 	// set up workers and execute jobs
-	for w := 1; w <= 10; w++ {
+	for w := 1; w <= batchWorkers; w++ {
 		wg.Add(1)
-		go extractDataConcurrently(jobs, results, wg)
+		go extractDataConcurrently(jobs, results, wg, apacheLogRegex)
 	}
 
 	// Close the channel when everything was processed
@@ -127,19 +146,15 @@ func ParseConcurrently(path string) (*Logs, error) {
 	return &Logs{logs}, nil
 }
 
-func extractDataConcurrently(job <-chan string, results chan<- Log, wg *sync.WaitGroup) {
+func extractDataConcurrently(job <-chan string, results chan<- Log, wg *sync.WaitGroup, apacheLogRegex *regexp.Regexp) {
 	// Decreasing internal counter for wait-group as soon as goroutine finishes
 	defer wg.Done()
 
 	for j := range job {
-		apacheLogRegexStr := "^(\\S*).*\\[(.*)\\]\\s\"(\\S*)\\s(\\S*)\\s([^\"]*)\"\\s(\\S*)\\s(\\S*)\\s\"([^\"]*)\"\\s\"([^\"]*)\"$"
-
-		apacheLogRegex := regexp.MustCompile(apacheLogRegexStr)
-
 		logResults := apacheLogRegex.FindAllStringSubmatch(j, -1)
 
 		if len(logResults) == 0 {
-			fmt.Println("skipping logResult file due to incorrect format: " + j)
+			logger.Default().Warnf("skipping logResult file due to incorrect format: %s", j)
 		} else {
 			var logResult Log
 			for _, result := range logResults {
